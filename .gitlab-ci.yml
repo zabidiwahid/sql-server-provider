@@ -1,0 +1,38 @@
+stages:
+  - build-app
+  - build-docker
+
+variables:
+  MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+cache:
+  paths:
+    - .m2/repository/
+  policy: pull-push
+
+build-app:
+  image: 
+    name: maven:latest
+  stage: build-app
+  artifacts:
+    paths:
+      - target/ 
+  script:
+    - mvn clean install -Dmaven.test.skip=true
+  only:
+    - tags
+
+build-docker:
+  stage: build-docker
+  image: docker:stable
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+  script:
+    - echo $CI_REGISTRY_IMAGE
+    - echo $CI_BUILD_TAG
+    - docker info
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_BUILD_TAG .
+    - docker push $CI_REGISTRY_IMAGE:$CI_BUILD_TAG
+  only:
+    - tags
